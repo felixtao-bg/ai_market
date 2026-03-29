@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { auth, isDevCredentialsEnabled } from "@/auth";
 import { DevLoginForm } from "@/components/dev-login-form";
 import { LoginButtons } from "@/components/login-buttons";
-import { WalletLoginButton } from "@/components/wallet-login-button";
+import { WalletLoginSection } from "@/components/wallet-login-section";
 
 export default async function LoginPage() {
   const session = await auth();
@@ -34,7 +34,7 @@ export default async function LoginPage() {
             <p className="mb-3 text-xs font-medium uppercase tracking-wide text-zinc-500">
               加密钱包
             </p>
-            <WalletLoginButton />
+            <WalletLoginSection />
           </div>
           <div>
             <p className="mb-3 text-xs font-medium uppercase tracking-wide text-zinc-500">

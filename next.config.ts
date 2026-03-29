@@ -7,6 +7,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 /** 避免上层目录存在其他 lockfile 时被误判为 monorepo 根目录 */
 const nextConfig: NextConfig = {
   outputFileTracingRoot: path.join(__dirname),
+  /** 避免 Prisma 与 NextAuth 被打进有问题的 server chunk（偶发 __webpack_exec__） */
+  serverExternalPackages: ["@prisma/client", "prisma"],
   /** MetaMask SDK / WalletConnect 的可选依赖，浏览器端不需要 */
   webpack: (config) => {
     config.resolve.alias = {

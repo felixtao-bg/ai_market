@@ -2,7 +2,13 @@ import Link from "next/link";
 import { listHotSkills } from "@/lib/products-query";
 
 export default async function HomePage() {
-  const hotSkills = await listHotSkills(8);
+  let hotSkills: Awaited<ReturnType<typeof listHotSkills>> = [];
+  let dbUnavailable = false;
+  try {
+    hotSkills = await listHotSkills(8);
+  } catch {
+    dbUnavailable = true;
+  }
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-16 sm:py-20">
@@ -67,7 +73,21 @@ export default async function HomePage() {
               按浏览次数，只含已发布 Skill。
             </p>
             <ol className="mt-4 space-y-2.5">
-              {hotSkills.length === 0 ? (
+              {dbUnavailable ? (
+                <li className="text-xs leading-relaxed text-amber-800 dark:text-amber-200">
+                  数据库连不上（例如本机需先{" "}
+                  <code className="rounded bg-amber-100 px-1 font-mono dark:bg-amber-900/60">
+                    docker compose up -d
+                  </code>{" "}
+                  再{" "}
+                  <code className="rounded bg-amber-100 px-1 font-mono dark:bg-amber-900/60">
+                    pnpm exec prisma migrate deploy
+                  </code>
+                  ）。也可用 Neon 的{" "}
+                  <code className="font-mono">DATABASE_URL</code> 写进{" "}
+                  <code className="font-mono">.env</code>。
+                </li>
+              ) : hotSkills.length === 0 ? (
                 <li className="text-xs text-zinc-500">
                   暂无数据。运行{" "}
                   <code className="rounded bg-zinc-100 px-1 font-mono dark:bg-zinc-800">
