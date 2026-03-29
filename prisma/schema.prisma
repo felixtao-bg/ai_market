@@ -1,0 +1,156 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+// 本地：Docker PostgreSQL（docker compose，端口 5433）或 Neon 等托管库
+// Vercel 等平台无持久磁盘，请使用 PostgreSQL，勿用 file: SQLite
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Auth.js adapter models
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime? @map("email_verified")
+  image         String?
+  walletAddress String?   @unique @map("wallet_address")
+  accounts      Account[]
+  sessions      Session[]
+  products      Product[]
+  orders        Order[]   @relation("BuyerOrders")
+
+  @@map("users")
+}
+
+model SiweChallenge {
+  nonce     String   @id
+  expiresAt DateTime @map("expires_at")
+
+  @@map("siwe_challenges")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+enum ProductType {
+  skill
+  mcp
+  plugin
+}
+
+enum PricingModel {
+  free
+  paid
+}
+
+enum ProductStatus {
+  draft
+  published
+  hidden
+}
+
+model Product {
+  id            String        @id @default(cuid())
+  ownerId       String        @map("owner_id")
+  type          ProductType
+  slug          String        @unique
+  title         String
+  description   String
+  // 逗号分隔标签（与表单一致）；PostgreSQL 仍可后续改为 text[] 若需要
+  tags          String        @default("")
+  pricingModel  PricingModel  @map("pricing_model")
+  priceCents    Int           @default(0) @map("price_cents")
+  currency      String        @default("usd")
+  distribution  Json
+  status        ProductStatus @default(draft)
+  viewCount     Int           @default(0) @map("view_count")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  owner      User        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  orderLines OrderLine[]
+
+  @@index([status, type])
+  @@index([ownerId])
+  @@index([status, viewCount])
+  @@map("products")
+}
+
+enum OrderStatus {
+  pending
+  paid
+  failed
+  canceled
+}
+
+model Order {
+  id                   String      @id @default(cuid())
+  buyerId              String      @map("buyer_id")
+  status               OrderStatus @default(pending)
+  stripeSessionId      String?     @unique @map("stripe_session_id")
+  stripePaymentIntent  String?     @map("stripe_payment_intent")
+  totalCents           Int         @default(0) @map("total_cents")
+  currency             String      @default("usd")
+  createdAt            DateTime    @default(now()) @map("created_at")
+  updatedAt            DateTime    @updatedAt @map("updated_at")
+
+  buyer User        @relation("BuyerOrders", fields: [buyerId], references: [id], onDelete: Cascade)
+  lines OrderLine[]
+
+  @@index([buyerId])
+  @@map("orders")
+}
+
+model OrderLine {
+  id         String @id @default(cuid())
+  orderId    String @map("order_id")
+  productId  String @map("product_id")
+  priceCents Int    @map("price_cents")
+  quantity   Int    @default(1)
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_lines")
+}
